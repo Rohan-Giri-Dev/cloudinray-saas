@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type ChangeEvent } from "react";
+import { useState, type ChangeEvent } from "react";
 import { CldImage, getCldImageUrl } from "next-cloudinary";
 
 const socialFormats = {
@@ -38,12 +38,6 @@ export default function Socialshare() {
   const [isUploading, setIsUploading] = useState(false);
   const [isTransforming, setIsTransforming] = useState(false);
 
-  useEffect(() => {
-    if (uploadedImage) {
-      setIsTransforming(true);
-    }
-  }, [selectedFormat, uploadedImage]);
-
   const handleFileUpload = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
 
@@ -70,6 +64,7 @@ export default function Socialshare() {
         throw new Error("No publicId returned from server");
       }
 
+      setIsTransforming(true);
       setUploadedImage(data.publicId);
     } catch (error) {
       console.error(error);
@@ -80,6 +75,10 @@ export default function Socialshare() {
   };
 
   const handleFormatChange = (event: ChangeEvent<HTMLSelectElement>) => {
+    if (uploadedImage) {
+      setIsTransforming(true);
+    }
+
     setSelectedFormat(event.target.value as SocialFormat);
   };
 

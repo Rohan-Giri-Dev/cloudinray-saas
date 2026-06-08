@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { v2 as cloudinary, UploadStream } from 'cloudinary';
-import {auth} from '@clerk/nextjs'
+import { v2 as cloudinary } from 'cloudinary';
+import {auth} from '@clerk/nextjs/server'
 
     // Configuration
 cloudinary.config({ 
@@ -11,14 +11,13 @@ cloudinary.config({
 
 interface CloudinaryUploadResult {
     public_id: string,
-    [key: string] : any,
 }
 
 export async function POST(request: NextRequest){
 
     try {
 
-    const {userId} = auth()
+    const {userId} = await auth()
 
     if(!userId){
         return NextResponse.json({error: "Unauthorized"}, {status: 401})
@@ -27,15 +26,15 @@ export async function POST(request: NextRequest){
     if(
         !process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME ||
         !process.env.NEXT_PUBLIC_CLOUDINARY_API_KEY ||
-        process.env.CLOUDINARY_API_SECRET 
+        !process.env.CLOUDINARY_API_SECRET 
     ){
-        return NextResponse.json({error: "Cloudinaray credintaions not found"}, {status: 500})
+        return NextResponse.json({error: "Cloudinary credentials not found"}, {status: 500})
     }
 
         const formData = await request.formData()
-        const file = formData.get('file') as File  | null // typecase it as file
+        const file = formData.get('file')
 
-        if(!file){
+        if(!(file instanceof File)){
             return NextResponse.json({error: "File not found"}, {status: 400})
         }
         
@@ -51,11 +50,11 @@ export async function POST(request: NextRequest){
                         else resolve(result as CloudinaryUploadResult);
                     }
                 )
-                UploadStream.end(buffer)
+                uploadStream.end(buffer)
             }
         )
 
-        return NextResponse.json({publiciId: result.public_id}, {status: 200} )
+        return NextResponse.json({publicId: result.public_id}, {status: 200} )
 
 
     } catch (error) {
