@@ -2,6 +2,13 @@
 
 import { useState, type ChangeEvent } from "react";
 import { CldImage, getCldImageUrl } from "next-cloudinary";
+import {
+  Download,
+  ImagePlus,
+  LayoutTemplate,
+  Library,
+  Upload,
+} from "lucide-react";
 
 const socialFormats = {
   "Instagram Square (1:1)": {
@@ -37,6 +44,10 @@ export default function Socialshare() {
 
   const [isUploading, setIsUploading] = useState(false);
   const [isTransforming, setIsTransforming] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const selectedDimensions = socialFormats[selectedFormat];
+  const canDownload = Boolean(uploadedImage && !isTransforming);
 
   const handleFileUpload = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -44,6 +55,7 @@ export default function Socialshare() {
     if (!file) return;
 
     setIsUploading(true);
+    setError(null);
 
     const formData = new FormData();
     formData.append("file", file);
@@ -68,9 +80,10 @@ export default function Socialshare() {
       setUploadedImage(data.publicId);
     } catch (error) {
       console.error(error);
-      alert("Failed to upload image");
+      setError("Failed to upload image");
     } finally {
       setIsUploading(false);
+      event.target.value = "";
     }
   };
 
@@ -120,92 +133,164 @@ export default function Socialshare() {
       window.URL.revokeObjectURL(url);
     } catch (error) {
       console.error(error);
-      alert("Failed to download image");
+      setError("Failed to download image");
     }
   };
 
   return (
-    <div className="container mx-auto p-4 max-w-4xl">
-      <h1 className="text-3xl font-bold mb-6 text-center">
-        Social Media Image Creator
-      </h1>
-
-      <div className="card">
-        <div className="card-body">
-          <h2 className="card-title mb-4">Upload an Image</h2>
-
-          <div className="form-control">
-            <label className="label">
-              <span className="label-text">Choose an image file</span>
-            </label>
-
-            <input
-              type="file"
-              accept="image/*"
-              onChange={handleFileUpload}
-              className="file-input file-input-bordered file-input-primary w-full"
-            />
+    <main className="min-h-screen bg-base-200">
+      <div className="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8">
+        <header className="flex flex-col gap-4 border-b border-base-300 pb-5 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <p className="text-sm font-medium text-primary">Cloudinary SaaS</p>
+            <h1 className="mt-1 text-2xl font-bold tracking-normal text-base-content sm:text-3xl">
+              Social Image Studio
+            </h1>
           </div>
 
-          {isUploading && (
-            <div className="mt-4">
-              <progress className="progress progress-primary w-full"></progress>
-            </div>
-          )}
+          <nav className="flex flex-wrap gap-2">
+            <a href="/home" className="btn btn-ghost btn-sm">
+              <Library size={16} />
+              Library
+            </a>
+            <a href="/video-upload" className="btn btn-ghost btn-sm">
+              <Upload size={16} />
+              Video upload
+            </a>
+          </nav>
+        </header>
 
-          {uploadedImage && (
-            <div className="mt-6">
-              <h2 className="card-title mb-4">Select Social Media Format</h2>
+        <div className="grid gap-6 lg:grid-cols-[minmax(300px,0.82fr)_minmax(0,1.18fr)]">
+          <section className="card rounded-lg border border-base-300 bg-base-100 shadow-sm">
+            <div className="card-body gap-5">
+              <div>
+                <h2 className="card-title text-xl">Source image</h2>
+                <p className="mt-1 text-sm text-base-content/60">
+                  Upload once, then crop for each social canvas.
+                </p>
+              </div>
 
-              <div className="form-control">
+              <label className="form-control">
+                <span className="label pb-2">
+                  <span className="label-text font-medium">Image file</span>
+                </span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFileUpload}
+                  disabled={isUploading}
+                  className="file-input file-input-bordered file-input-primary w-full"
+                />
+              </label>
+
+              {isUploading && (
+                <progress className="progress progress-primary w-full" />
+              )}
+
+              <label className="form-control">
+                <span className="label pb-2">
+                  <span className="label-text font-medium">Canvas</span>
+                </span>
                 <select
                   className="select select-bordered w-full"
                   value={selectedFormat}
                   onChange={handleFormatChange}
                 >
-                  {Object.keys(socialFormats).map((format) => (
-                    <option key={format} value={format}>
-                      {format}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="mt-6 relative">
-                <h3 className="text-lg font-semibold mb-2">Preview:</h3>
-
-                <div className="flex justify-center">
-                  {isTransforming && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-base-100 bg-opacity-50 z-10">
-                      <span className="loading loading-spinner loading-lg"></span>
-                    </div>
+                  {(Object.keys(socialFormats) as SocialFormat[]).map(
+                    (format) => (
+                      <option key={format} value={format}>
+                        {format}
+                      </option>
+                    ),
                   )}
+                </select>
+              </label>
 
-                  <CldImage
-                    key={`${uploadedImage}-${selectedFormat}`}
-                    width={socialFormats[selectedFormat].width}
-                    height={socialFormats[selectedFormat].height}
-                    src={uploadedImage}
-                    sizes="100vw"
-                    alt="transformed image"
-                    crop="fill"
-                    gravity="auto"
-                    className="max-w-full h-auto rounded-lg"
-                    onLoad={() => setIsTransforming(false)}
-                    onError={() => setIsTransforming(false)}
-                  />
+              <div className="grid grid-cols-2 gap-3">
+                <div className="rounded-md border border-base-300 bg-base-200/60 p-3">
+                  <p className="text-xs font-medium uppercase text-base-content/50">
+                    Width
+                  </p>
+                  <p className="mt-1 font-semibold">
+                    {selectedDimensions.width}px
+                  </p>
+                </div>
+                <div className="rounded-md border border-base-300 bg-base-200/60 p-3">
+                  <p className="text-xs font-medium uppercase text-base-content/50">
+                    Height
+                  </p>
+                  <p className="mt-1 font-semibold">
+                    {selectedDimensions.height}px
+                  </p>
                 </div>
               </div>
 
-              <div className="card-actions justify-end mt-6">
-                <button className="btn btn-primary" onClick={handleDownload}>
-                  Download for {selectedFormat}
-                </button>
+              {error && <div className="alert alert-error text-sm">{error}</div>}
+
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={handleDownload}
+                disabled={!canDownload}
+              >
+                <Download size={18} />
+                Download image
+              </button>
+            </div>
+          </section>
+
+          <section className="card rounded-lg border border-base-300 bg-base-100 shadow-sm">
+            <div className="card-body gap-5">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <h2 className="card-title text-xl">Preview</h2>
+                  <p className="mt-1 text-sm text-base-content/60">
+                    {selectedFormat}
+                  </p>
+                </div>
+
+                <div className="badge badge-outline gap-2 self-start sm:self-auto">
+                  <LayoutTemplate size={14} />
+                  {selectedDimensions.width} x {selectedDimensions.height}
+                </div>
+              </div>
+
+              <div className="relative flex min-h-[360px] items-center justify-center overflow-hidden rounded-lg border border-base-300 bg-base-200/70 p-4">
+                {isTransforming && (
+                  <div className="absolute inset-0 z-10 flex items-center justify-center bg-base-100/60 backdrop-blur-sm">
+                    <span className="loading loading-spinner loading-lg" />
+                  </div>
+                )}
+
+                {uploadedImage ? (
+                  <CldImage
+                    key={`${uploadedImage}-${selectedFormat}`}
+                    width={selectedDimensions.width}
+                    height={selectedDimensions.height}
+                    src={uploadedImage}
+                    sizes="(min-width: 1024px) 58vw, 100vw"
+                    alt="Transformed social media image"
+                    crop="fill"
+                    gravity="auto"
+                    className="h-auto max-h-[620px] w-full rounded-lg border border-base-300 object-contain shadow-sm"
+                    onLoad={() => setIsTransforming(false)}
+                    onError={() => setIsTransforming(false)}
+                  />
+                ) : (
+                  <div className="flex flex-col items-center text-center text-base-content/60">
+                    <span className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                      <ImagePlus size={22} />
+                    </span>
+                    <p className="mt-3 text-sm font-medium">
+                      No image selected
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
-          )}
+          </section>
         </div>
       </div>
-    </div>
+    </main>
   );
 }
